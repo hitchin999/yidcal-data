@@ -13,6 +13,7 @@ def remove_nikud(text: str) -> str:
     return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
 
 def hebrew_to_int(hebrew: str) -> int:
+    """Convert Hebrew letter-number to int (e.g., "א'" -> 1, handles reversed like "ח\"י" = "י\"ח" = 18)."""
     if not hebrew:
         return 0
     hebrew = hebrew.replace("'", "").replace('"', "")
