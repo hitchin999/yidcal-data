@@ -1,0 +1,57 @@
+name: Update Yahrtzeits Cache
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly on the 1st at 00:00 UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # To push commits
+      pull-requests: write  # To create PRs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comparisons
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install aiohttp beautifulsoup4 unicodedata  # Add any other deps from your code (e.g., pyluach if needed)
+
+      - name: Run scraper to generate new JSON
+        run: python scraper.py  # Outputs new_yahrtzeit_cache.json
+
+      - name: Compare old and new JSON
+        id: compare
+        run: |
+          if ! diff -q yahrtzeit_cache.json new_yahrtzeit_cache.json; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request if changed
+        if: steps.compare.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Update yahrtzeit_cache.json with latest data from Yidtish'
+          title: 'Automated Yahrtzeit Update'
+          body: |
+            This PR updates yahrtzeit_cache.json based on latest scrape from Yidtish forum.
+            Changes detected—please review the diff and merge if approved.
+          branch: auto-update-yahrtzeits
+          base: main
+          labels: automated, update
+          add-paths: yahrtzeit_cache.json
+          delete-branch: true  # Clean up after merge
