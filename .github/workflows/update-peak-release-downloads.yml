@@ -1,0 +1,39 @@
+name: Update peak release downloads
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get current max download count across all releases
+        run: |
+          MAX=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/hitchin999/YidCal/releases | jq 'map(.assets[] | select(.name=="yidcal.zip") | .download_count) | max // 0')
+          echo "MAX=$MAX" >> $GITHUB_ENV
+
+      - name: Read current peak
+        id: current
+        run: |
+          FILE="badge/peak_release_downloads.json"
+          if [ -f "$FILE" ]; then
+            CURRENT=$(jq -r '.value // 0' "$FILE")
+          else
+            mkdir -p badge
+            CURRENT=0
+          fi
+          echo "CURRENT=$CURRENT" >> $GITHUB_ENV
+
+      - name: Update file if new peak
+        if: ${{ env.MAX > env.CURRENT }}
+        run: |
+          echo "{\"value\":${MAX}}" > badge/peak_release_downloads.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add badge/peak_release_downloads.json
+          git commit -m "Update peak release downloads to ${MAX}"
+          git push
