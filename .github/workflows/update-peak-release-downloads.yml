@@ -29,7 +29,7 @@ jobs:
           echo "CURRENT=$CURRENT" >> $GITHUB_ENV
 
       - name: Update file if new peak
-        if: ${{ env.MAX > env.CURRENT }}
+        if: ${{ fromJSON(env.MAX) > fromJSON(env.CURRENT) }}
         run: |
           echo "{\"value\":${MAX}}" > badge/peak_release_downloads.json
           git config user.name "github-actions[bot]"
